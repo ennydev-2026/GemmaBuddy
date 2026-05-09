@@ -1,0 +1,52 @@
+services:
+  api:
+    build:
+      context: ./backend
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    depends_on:
+      - tts-piper
+
+  tts-piper:
+    build:
+      context: ./backend
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    command: ["uvicorn", "gemmabuddy.piper_server:app", "--host", "0.0.0.0", "--port", "5000"]
+    ports:
+      - "5000:5000"
+
+  gemma-runtime:
+    image: vllm/vllm-openai:latest
+    profiles: ["runtime"]
+    environment:
+      - MODEL_NAME=${GEMMA_MODEL:-google/gemma-4-E4B-it}
+    command: ["--model", "${GEMMA_MODEL:-google/gemma-4-E4B-it}", "--served-model-name", "${GEMMA_MODEL:-google/gemma-4-E4B-it}"]
+    ports:
+      - "8001:8000"
+
+  caddy:
+    image: caddy:2
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:

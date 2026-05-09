@@ -1,0 +1,15 @@
+{$PUBLIC_DOMAIN} {
+    encode zstd gzip
+
+    handle /xiaozhi/ota/* {
+        reverse_proxy api:8000
+    }
+
+    handle /xiaozhi/ws {
+        reverse_proxy api:8000
+    }
+
+    handle /healthz {
+        reverse_proxy api:8000
+    }
+}

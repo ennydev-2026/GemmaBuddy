@@ -1,0 +1,22 @@
+[project]
+name = "gemmabuddy-backend"
+version = "0.1.0"
+description = "Self-hosted GemmaBuddy OTA and XiaoZhi-compatible voice WebSocket backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "pydantic-settings>=2.4.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "websockets>=13.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
