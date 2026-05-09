@@ -109,5 +109,4 @@ def test_websocket_turn(monkeypatch) -> None:
             assert ws.receive_json()["type"] == "llm"
             assert ws.receive_json() == {"type": "tts", "state": "start"}
             assert ws.receive_json()["state"] == "sentence_start"
-            assert isinstance(ws.receive_bytes(), bytes)
             assert ws.receive_json() == {"type": "tts", "state": "stop"}

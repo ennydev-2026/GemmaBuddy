@@ -187,11 +187,12 @@ class CustomBoard : public WifiBoard {
                 EnterWifiConfigMode();
                 return;
             }
-            if (app.GetDeviceState() == kDeviceStateListening || app.GetDeviceState() == kDeviceStateSpeaking) {
-                display_->ShowCancelledFeedback();
-                app.PlaySound(Lang::Sounds::OGG_VIBRATION);
-            }
-            app.ToggleChatState();
+        });
+        boot_button_.OnPressDown([this]() {
+            Application::GetInstance().StartListening();
+        });
+        boot_button_.OnPressUp([this]() {
+            Application::GetInstance().StopListening();
         });
 
         pwr_button_.OnLongPress([this]() {
