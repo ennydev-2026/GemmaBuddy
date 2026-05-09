@@ -89,7 +89,7 @@ async def send_turn(websocket: WebSocket, turn: GemmaTurn, tts: TtsAdapter) -> N
     logger.info("sending %d tts audio frame(s)", len(frames))
     for frame in frames:
         await websocket.send_bytes(frame)
-    await websocket.send_json({"type": "tts", "state": "stop"})
+    await websocket.send_json({"type": "tts", "state": "stop", "text": turn.speak})
 
 
 @app.websocket("/xiaozhi/ws")

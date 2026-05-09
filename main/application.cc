@@ -529,13 +529,20 @@ void Application::InitializeProtocol() {
                     SetDeviceState(kDeviceStateSpeaking);
                 });
             } else if (strcmp(state->valuestring, "stop") == 0) {
-                Schedule([this]() {
+                auto text = cJSON_GetObjectItem(root, "text");
+                std::string final_message = cJSON_IsString(text) ? text->valuestring : "";
+                Schedule([this, display, final_message]() {
                     if (GetDeviceState() == kDeviceStateSpeaking) {
                         if (listening_mode_ == kListeningModeManualStop) {
                             SetDeviceState(kDeviceStateIdle);
                         } else {
                             SetDeviceState(kDeviceStateListening);
                         }
+                    }
+                    if (!final_message.empty()) {
+                        Schedule([display, final_message]() {
+                            display->SetChatMessage("assistant", final_message.c_str());
+                        });
                     }
                 });
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {
@@ -1113,4 +1120,3 @@ void Application::ResetProtocol() {
         protocol_.reset();
     });
 }
-
