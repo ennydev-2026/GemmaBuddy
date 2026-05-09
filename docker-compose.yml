@@ -19,8 +19,8 @@ services:
       - path: .env
         required: false
     command: ["uvicorn", "gemmabuddy.piper_server:app", "--host", "0.0.0.0", "--port", "5000"]
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
 
   gemma-runtime:
     image: vllm/vllm-openai:latest
