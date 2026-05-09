@@ -66,6 +66,20 @@ def test_gemma_parser_invalid_json_fallback() -> None:
     assert turn.speak
 
 
+def test_gemma_parser_normalizes_ollama_drift() -> None:
+    turn = GemmaAdapter.parse_turn(
+        {
+            "transcript": "hola",
+            "emotion": "friendly",
+            "speak": True,
+            "tool_calls": None,
+        }
+    )
+    assert turn.emotion == "neutral"
+    assert turn.speak == "hola"
+    assert turn.tool_calls == []
+
+
 def test_websocket_turn(monkeypatch) -> None:
     async def fake_turn(self, opus_frames):
         assert opus_frames == [b"opus-frame"]

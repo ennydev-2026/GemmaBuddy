@@ -6,7 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     public_domain: str = Field(default="gemmabuddy.local", alias="PUBLIC_DOMAIN")
+    public_scheme: str = Field(default="https", alias="PUBLIC_SCHEME")
+    ws_scheme: str = Field(default="wss", alias="WS_SCHEME")
     device_token: str = Field(default="change-me", alias="DEVICE_TOKEN")
+    gemma_provider: str = Field(default="openai", alias="GEMMA_PROVIDER")
     gemma_model: str = Field(default="google/gemma-4-E4B-it", alias="GEMMA_MODEL")
     gemma_runtime_url: str = Field(
         default="http://gemma-runtime:8000/v1/chat/completions",
@@ -20,7 +23,7 @@ class Settings(BaseSettings):
 
     @property
     def websocket_url(self) -> str:
-        return f"wss://{self.public_domain}/xiaozhi/ws"
+        return f"{self.ws_scheme}://{self.public_domain}/xiaozhi/ws"
 
 
 @lru_cache

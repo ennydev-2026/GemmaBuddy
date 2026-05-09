@@ -33,5 +33,5 @@ CONFIG_LV_USE_SNAPSHOT=y
 
 # GemmaBuddy target device and self-hosted OTA endpoint
 CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_ePaper_1_54_v2=y
-CONFIG_OTA_URL="https://gemmabuddy.local/xiaozhi/ota/"
+CONFIG_OTA_URL="http://192.168.1.11:8000/xiaozhi/ota/"
 CONFIG_USE_MULTILINE_CHAT_MESSAGE=y

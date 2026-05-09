@@ -9,7 +9,7 @@ The firmware keeps the XiaoZhi-compatible OTA and WebSocket protocol shape for d
 - Audio transport: binary Opus frames plus JSON control messages
 - Device features: e-paper face/emotions, push-to-talk, sleep/power, audio I/O, MCP tools
 
-The backend runs Gemma 4 E4B-it for audio understanding, IoT reasoning, tool selection, and spoken response planning. Local TTS is provided by Piper.
+The backend can call either an OpenAI-compatible Gemma runtime or the local Ollama runtime running on this laptop. Local TTS is provided by Piper.
 
 ## Repository Layout
 
@@ -32,10 +32,10 @@ The ESP32-S3 defaults select:
 
 ```text
 CONFIG_BOARD_TYPE_WAVESHARE_ESP32_S3_ePaper_1_54_v2=y
-CONFIG_OTA_URL="https://gemmabuddy.local/xiaozhi/ota/"
+CONFIG_OTA_URL="http://192.168.1.11:8000/xiaozhi/ota/"
 ```
 
-For your domain, set `CONFIG_OTA_URL` with `idf.py menuconfig` under `GemmaBuddy -> Default OTA URL`, or edit `sdkconfig` for a reproducible build.
+For a same-network laptop demo, keep `CONFIG_OTA_URL` pointed at the laptop LAN IP. For a public domain, set `CONFIG_OTA_URL` with `idf.py menuconfig` under `GemmaBuddy -> Default OTA URL`, or edit `sdkconfig.defaults.esp32s3` for a reproducible build.
 
 Flash and monitor:
 
@@ -54,10 +54,12 @@ docker compose up --build
 
 Required values:
 
-- `PUBLIC_DOMAIN`: public TLS domain for the device.
+- `PUBLIC_DOMAIN`: public domain or LAN `host:port` for the device. This laptop currently uses `192.168.1.11:8000`.
+- `PUBLIC_SCHEME` / `WS_SCHEME`: use `http` / `ws` on the same LAN, or `https` / `wss` behind Caddy.
 - `DEVICE_TOKEN`: shared device token returned by OTA and required by WebSocket.
-- `GEMMA_MODEL`: defaults to `google/gemma-4-E4B-it`.
-- `GEMMA_RUNTIME_URL`: OpenAI-compatible or local runtime endpoint.
+- `GEMMA_PROVIDER`: `ollama` for the local laptop runtime, or `openai` for an OpenAI-compatible server.
+- `GEMMA_MODEL`: defaults to the local Ollama `gemma4:e4b` in this LAN setup.
+- `GEMMA_RUNTIME_URL`: Ollama chat endpoint or OpenAI-compatible endpoint.
 - `PIPER_VOICE`: Piper voice id/path used by the TTS service.
 
 ## Protocol
@@ -68,7 +70,7 @@ OTA returns:
 {
   "server_time": { "timestamp": 0, "timezone_offset": -180 },
   "websocket": {
-    "url": "wss://example.com/xiaozhi/ws",
+    "url": "ws://192.168.1.11:8000/xiaozhi/ws",
     "token": "device-token",
     "version": 1
   },
