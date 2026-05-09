@@ -10,6 +10,7 @@ services:
       - "8000:8000"
     depends_on:
       - tts-piper
+      - gemma-runtime
 
   tts-piper:
     build:
@@ -21,10 +22,11 @@ services:
     command: ["uvicorn", "gemmabuddy.piper_server:app", "--host", "0.0.0.0", "--port", "5000"]
     expose:
       - "5000"
+    volumes:
+      - piper_voices:/voices
 
   gemma-runtime:
     image: vllm/vllm-openai:latest
-    profiles: ["runtime"]
     environment:
       - MODEL_NAME=${GEMMA_MODEL:-google/gemma-4-E4B-it}
     command: ["--model", "${GEMMA_MODEL:-google/gemma-4-E4B-it}", "--served-model-name", "${GEMMA_MODEL:-google/gemma-4-E4B-it}"]
@@ -50,3 +52,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  piper_voices:

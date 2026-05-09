@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, Header, WebSocket, WebSocketDisconnect, status
 
 from .config import Settings, get_settings
+from .audio import FRAME_DURATION_MS
 from .gemma import GemmaAdapter
 from .schemas import ConversationContext, GemmaTurn
 from .tools import ToolDispatcher, ToolRejected
@@ -87,6 +88,8 @@ async def send_turn(websocket: WebSocket, turn: GemmaTurn, tts: TtsAdapter) -> N
     await websocket.send_json({"type": "tts", "state": "sentence_start", "text": turn.speak})
     frames = await tts.synthesize_opus_frames(turn.speak)
     logger.info("sending %d tts audio frame(s)", len(frames))
+    if not frames:
+        logger.warning("tts produced no audio frames; device will receive text-only turn")
     for frame in frames:
         await websocket.send_bytes(frame)
     await websocket.send_json({"type": "tts", "state": "stop", "text": turn.speak})
@@ -149,7 +152,13 @@ async def xiaozhi_ws(
                 context.audio_frames.clear()
                 logger.info("listen started session=%s", session_id)
             elif event_type == "listen" and event.get("state") == "stop":
-                logger.info("listen stopped session=%s audio_frames=%d", session_id, len(context.audio_frames))
+                duration_seconds = len(context.audio_frames) * FRAME_DURATION_MS / 1000
+                logger.info(
+                    "listen stopped session=%s audio_frames=%d estimated_duration=%.2fs",
+                    session_id,
+                    len(context.audio_frames),
+                    duration_seconds,
+                )
                 turn = await gemma.complete_audio_turn(context.audio_frames)
                 for call in turn.tool_calls:
                     try:

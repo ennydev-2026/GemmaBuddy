@@ -1,12 +1,16 @@
 import base64
 import json
+import logging
 from typing import Any
 
 import httpx
 from pydantic import ValidationError
 
+from .audio import opus_frames_to_wav
 from .config import Settings
 from .schemas import GemmaTurn
+
+logger = logging.getLogger("gemmabuddy.gemma")
 
 
 SYSTEM_PROMPT = """You are GemmaBuddy, a concise voice IoT assistant running on a Waveshare ESP32-S3 e-paper device.
@@ -27,7 +31,14 @@ class GemmaAdapter:
         return await self.complete_with_openai_compatible(opus_frames)
 
     async def complete_with_openai_compatible(self, opus_frames: list[bytes]) -> GemmaTurn:
-        audio_b64 = base64.b64encode(b"".join(opus_frames)).decode("ascii")
+        wav_audio, duration_seconds = opus_frames_to_wav(opus_frames)
+        audio_b64 = base64.b64encode(wav_audio).decode("ascii")
+        logger.info(
+            "decoded input audio frames=%d wav_bytes=%d duration=%.2fs",
+            len(opus_frames),
+            len(wav_audio),
+            duration_seconds,
+        )
         payload: dict[str, Any] = {
             "model": self.settings.gemma_model,
             "messages": [
@@ -35,10 +46,10 @@ class GemmaAdapter:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Process this Opus voice turn and choose IoT tools if needed."},
+                        {"type": "text", "text": "Transcribe and process this voice turn. Choose IoT tools only if needed."},
                         {
                             "type": "input_audio",
-                            "input_audio": {"data": audio_b64, "format": "opus"},
+                            "input_audio": {"data": audio_b64, "format": "wav"},
                         },
                     ],
                 },
@@ -51,8 +62,11 @@ class GemmaAdapter:
             response = await self.client.post(self.settings.gemma_runtime_url, json=payload)
             response.raise_for_status()
             raw = response.json()["choices"][0]["message"]["content"]
-            return self.parse_turn(raw)
+            turn = self.parse_turn(raw)
+            logger.info("gemma turn transcript=%r emotion=%s speak=%r", turn.transcript, turn.emotion, turn.speak)
+            return turn
         except Exception:
+            logger.exception("gemma runtime failed to process audio turn")
             return GemmaTurn(
                 transcript="",
                 emotion="neutral",

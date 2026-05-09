@@ -5,6 +5,7 @@ from gemmabuddy.config import Settings, get_settings
 from gemmabuddy.gemma import GemmaAdapter
 from gemmabuddy.main import app
 from gemmabuddy.schemas import GemmaTurn
+from gemmabuddy.tts import TtsAdapter
 
 
 def override_settings() -> Settings:
@@ -80,6 +81,40 @@ def test_gemma_parser_normalizes_ollama_drift() -> None:
     assert turn.tool_calls == []
 
 
+def test_gemma_adapter_sends_wav_audio(monkeypatch) -> None:
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"transcript":"hola","emotion":"happy","speak":"Hola.","tool_calls":[]}'
+                        }
+                    }
+                ]
+            }
+
+    class FakeClient:
+        async def post(self, url, json):
+            assert url == "http://gemma.invalid/v1/chat/completions"
+            audio = json["messages"][1]["content"][1]["input_audio"]
+            assert audio["format"] == "wav"
+            assert audio["data"]
+            return FakeResponse()
+
+    monkeypatch.setattr("gemmabuddy.gemma.opus_frames_to_wav", lambda frames: (b"RIFF-test-wav", 0.06))
+    adapter = GemmaAdapter(override_settings(), client=FakeClient())
+
+    import asyncio
+
+    turn = asyncio.run(adapter.complete_audio_turn([b"opus-frame"]))
+    assert turn.transcript == "hola"
+    assert turn.speak == "Hola."
+
+
 def test_websocket_turn(monkeypatch) -> None:
     async def fake_turn(self, opus_frames):
         assert opus_frames == [b"opus-frame"]
@@ -91,6 +126,11 @@ def test_websocket_turn(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(GemmaAdapter, "complete_audio_turn", fake_turn)
+
+    async def fake_tts(self, text):
+        return [b"opus-response"]
+
+    monkeypatch.setattr(TtsAdapter, "synthesize_opus_frames", fake_tts)
 
     with TestClient(app) as client:
         with client.websocket_connect(
@@ -109,6 +149,7 @@ def test_websocket_turn(monkeypatch) -> None:
             assert ws.receive_json()["type"] == "llm"
             assert ws.receive_json() == {"type": "tts", "state": "start"}
             assert ws.receive_json()["state"] == "sentence_start"
+            assert ws.receive_bytes() == b"opus-response"
             assert ws.receive_json() == {
                 "type": "tts",
                 "state": "stop",
